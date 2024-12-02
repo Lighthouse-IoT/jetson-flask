@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 import test_run as t
 import test_cam as tc
+import random
 
 import os
 
@@ -34,14 +35,15 @@ def file_test():
 @app.get("/test")
 def test_send():
   url = os.environ.get("NODE_SERVER_URL")
+  zero_one = random.randrange(0,2)
   t.current_date()
-  tc.save_image()
+  # tc.save_image()
   try:
     response = requests.get(url)
     print(url)
     if response.status_code == 200:
       print(response.json()['message'])
-      return t.current_date()
+      return zero_one
   except:
     print("Error", response.status_code)
     return None

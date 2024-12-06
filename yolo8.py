@@ -37,6 +37,8 @@ def gstreamer_pipeline(
 
 def show_camera():
     model = YOLO("last.pt")
+    eye_model = YOLO("yolov8_eyes_last.pt")
+
   
     # To flip the image, modify the flip_method parameter (0 and 2 are the most common)
     cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
@@ -44,25 +46,58 @@ def show_camera():
     if cap.isOpened():
         ret_val, img = cap.read()
         results = model(img)
+        eye_results = eye_model(img)
+
 
         cap.release()
         cv2.destroyAllWindows()
 
-        # Handle results and detect classes
+        # 자세 모델
         if results[0].boxes is None or results[0].boxes.cls is None:
             detected_classes = []
         else:
             detected_classes = [model.names[int(cls)] for cls in results[0].boxes.cls]
-
+        
+        # 눈 모델
+        if eye_results[0].boxes is None or eye_results[0].boxes.cls is None:
+            eye_detected_classes = []
+        else:
+            eye_detected_classes = [eye_model.names[int(cls)] for cls in eye_results[0].boxes.cls]
+        
+        detect_result = 0
         # Logic to determine return value
         if "BAD" in detected_classes and "STUDY" in detected_classes:
-            return 0
+            detect_result = 1
         elif "BAD" in detected_classes:
-            return 0
+            detect_result = 0
         elif "STUDY" in detected_classes:
-            return 1
+            detect_result = 1
         else:
-            return 0  # Default value if neither is detected
+            detect_result = 0
+
+        if detect_result == 1:
+            closed_variants = {"closed", "closeds"}
+            open_variants = {"open", "opens"}
+            
+            # detected_classes와 eye_detected_classes를 set으로 변환
+            detected_classes_set = set(detected_classes)
+            eye_detected_classes_set = set(eye_detected_classes)
+
+            if detected_classes_set & closed_variants and detected_classes_set & open_variants:
+                print("close and open")
+                detect_result = 1
+            elif eye_detected_classes_set & open_variants:
+                print("open")
+                detect_result = 1
+            elif eye_detected_classes_set & closed_variants:
+                print("close")
+                detect_result = 0
+
+            else:
+                detect_result = 0
+
+
+        return detect_result
     else:
         print("Unable to open camera")
-        return -1
+        return 0
